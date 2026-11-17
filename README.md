@@ -13,7 +13,7 @@ MindsDB is an open-source AI query engine. You connect your databases, warehouse
 | `MindsDB` | this repo (`Dockerfile`) | `mindsdb/mindsdb:v26.1.0` pinned by digest `sha256:163011c09299a95c97ce2e1b9f157683b3538c5b9167ddc258b95ac256c806bb` |
 
 - One service with a Railway volume on `/root/mdb_storage`. MindsDB keeps everything there: its SQLite catalogue (projects, data source connections, models, views, jobs, agents, knowledge bases), uploaded files and logs. Redeploys and restarts keep it.
-- A public Railway domain for the Studio, the HTTP API (`/api`), the MCP server (`/mcp/`) and the A2A endpoint (`/a2a`). Health check: `/api/util/ping`.
+- A public Railway domain for the Studio, the HTTP API (`/api`), the MCP server (`/mcp/streamable` and `/mcp/sse`) and the A2A endpoint (`/a2a`). Health check: `/api/util/ping`.
 - A Railway TCP proxy for the MySQL API (container port `47335`, TLS on).
 
 The wrapper `Dockerfile` and `start.sh` make small changes to the upstream image:
@@ -29,7 +29,7 @@ The wrapper `Dockerfile` and `start.sh` make small changes to the upstream image
 | `PORT` | `47334` | HTTP port; the Railway domain points at it |
 | `MINDSDB_USERNAME` | `mindsdb` | Login user for the Studio, HTTP API and MySQL API |
 | `MINDSDB_PASSWORD` | generated | Login password; required, MindsDB won't start without it |
-| `MINDSDB_AUTH_TOKEN` | generated | Fixed bearer token for the HTTP API, MCP and A2A, so AI clients keep working after a restart |
+| `MINDSDB_AUTH_TOKEN` | generated | Fixed bearer token for the HTTP API, MCP and A2A, so AI clients keep working after a restart (the Studio login also returns it) |
 | `FLASK_SECRET_KEY` | generated | Signs Studio session cookies, so you stay logged in across restarts |
 
 The template asks nothing at deploy time. Optional settings you can add on the service (see the [MindsDB docs](https://docs.mindsdb.com/setup/environment-vars)):
@@ -43,7 +43,7 @@ The template asks nothing at deploy time. Optional settings you can add on the s
 
 - Studio: `https://YOUR-DOMAIN/`. Sign in with `MINDSDB_USERNAME` and `MINDSDB_PASSWORD` (shown in the service's Variables tab).
 - HTTP API: `POST https://YOUR-DOMAIN/api/sql/query` with `Authorization: Bearer <MINDSDB_AUTH_TOKEN>` and `{"query": "SELECT 1"}`.
-- MCP clients (Claude, Cursor): `https://YOUR-DOMAIN/mcp/` with the header `Authorization: Bearer <MINDSDB_AUTH_TOKEN>`.
+- MCP clients (Claude, Cursor): `https://YOUR-DOMAIN/mcp/streamable` (or `/mcp/sse` for SSE clients) with the header `Authorization: Bearer <MINDSDB_AUTH_TOKEN>`.
 - MindsDB 26.1 revokes a token on logout (`POST /api/logout` with that token, which the Studio's sign-out may also send). If `MINDSDB_AUTH_TOKEN` stops working after a logout, restart the service to bring it back.
 - MySQL clients and BI tools: the TCP proxy host and port from the service's Settings → Networking, with the same user and password.
 
